@@ -29,7 +29,7 @@ class WordParse:
 
         return
 
-    def get_train_test(self, no_balance = False):
+    def get_train_test(self):
         train_df = pd.read_csv(self.TRAIN_DATA_FILE)
         test_df = pd.read_csv(self.TEST_DATA_FILE)
 
@@ -45,15 +45,6 @@ class WordParse:
         comments_test = self.__get_word_list(list_sentences_test)
 
         train_data, test_data, self.word_index = self.__get_word_keys(comments_train, comments_test)
-
-        if no_balance:
-            ind = np.any(train_y == 1, axis = 1)
-            train_data_mj = train_data[~ind,:]
-            train_y_mj = train_y[~ind,:]
-            train_data_mn = train_data[ind,:]
-            train_y_mn = train_y[ind,:]
-            train_data = np.concatenate((train_data_mj, np.repeat(train_data_mn, 10, axis=0)), axis = 0)
-            train_y = np.concatenate((train_y_mj, np.repeat(train_y_mn, 10, axis=0)), axis=0)
 
         return train_data, test_data, train_y
 

@@ -4,21 +4,21 @@ import numpy as np
 from keras import initializers, regularizers, constraints
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from keras.engine.topology import Layer
-from keras.layers import Dense, Input, LSTM, Embedding, Dropout, Bidirectional, Conv1D, MaxPool1D, Flatten, GRU, Concatenate, SpatialDropout1D
+from keras.layers import Dense, Input, LSTM, Embedding, Dropout, Bidirectional, Conv1D, MaxPool1D, Flatten, GRU, Concatenate, SpatialDropout1D, GlobalMaxPool1D
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model, load_model
+from keras.optimizers import Adam, RMSprop
 
 import tensorflow as tf
 import keras.backend.tensorflow_backend as KTF
 import os
 
-config = tf.ConfigProto()
-config.gpu_options.allow_growth=True   #不全部占满显存, 按需分配
-config.gpu_options.per_process_gpu_memory_fraction = 0.95
-session = tf.Session(config=config)
-
-# 设置session
-KTF.set_session(session)
+# config = tf.ConfigProto()
+# config.gpu_options.allow_growth=True   #不全部占满显存, 按需分配
+# config.gpu_options.per_process_gpu_memory_fraction = 0.95
+# session = tf.Session(config=config)
+# # 设置session
+# KTF.set_session(session)
 
 
 class Attention(Layer):
@@ -170,11 +170,11 @@ class multi_nlp_model():
 
         model_tag = 'bidirectional_multi_lstm_attention_glove_vectors_drop_params_%.2f_%.2f' % (
         self.dropout_rate_lstm, self.dropout_rate_dense)
-        bst_model_path = self.model_path + model_tag + '_model_idx_' + model_idx + '.h5'
+        self.bst_model_path = self.model_path + model_tag + '_model_idx_' + model_idx + '.h5'
         print(model_tag)
         self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
         self.early_stopping = EarlyStopping(monitor='val_loss', patience=10)
-        self.model_checkpoint = ModelCheckpoint(bst_model_path, save_best_only=True, save_weights_only=True)
+        self.model_checkpoint = ModelCheckpoint(self.bst_model_path, save_best_only=True, save_weights_only=True)
         self.model = model
         self.model_tag = model_tag
 
@@ -253,11 +253,11 @@ class nlp_model():
 
         model_tag = 'bidirectional_gru_attention_glove_vectors_drop_params_%.2f_%.2f' % (
         self.dropout_rate_lstm, self.dropout_rate_dense)
-        bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
+        self.bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
         print(model_tag)
         self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
         self.early_stopping = EarlyStopping(monitor='val_loss', patience=10)
-        self.model_checkpoint = ModelCheckpoint(bst_model_path, save_best_only=True, save_weights_only=True)
+        self.model_checkpoint = ModelCheckpoint(self.bst_model_path, save_best_only=True, save_weights_only=True)
         self.model = model
         self.model_tag = model_tag
 
@@ -312,11 +312,11 @@ class nlp_model():
 
         model_tag = 'bidirectional_lstm_conv1d_glove_vectors_drop_params_%.2f_%.2f' % (
             self.dropout_rate_lstm, self.dropout_rate_dense)
-        bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
+        self.bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
         print(model_tag)
         self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
         self.early_stopping = EarlyStopping(monitor='val_loss', patience=10)
-        self.model_checkpoint = ModelCheckpoint(bst_model_path, save_best_only=True, save_weights_only=True)
+        self.model_checkpoint = ModelCheckpoint(self.bst_model_path, save_best_only=True, save_weights_only=True)
         self.model = model
         self.model_tag = model_tag
 
@@ -366,11 +366,47 @@ class nlp_model():
 
         model_tag = 'conv1d_glove_vectors_drop_params_%.2f_%.2f' % (
             self.dropout_rate_lstm, self.dropout_rate_dense)
-        bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
+        self.bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
         print(model_tag)
         self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
         self.early_stopping = EarlyStopping(monitor='val_loss', patience=10)
-        self.model_checkpoint = ModelCheckpoint(bst_model_path, save_best_only=True, save_weights_only=True)
+        self.model_checkpoint = ModelCheckpoint(self.bst_model_path, save_best_only=True, save_weights_only=True)
+        self.model = model
+        self.model_tag = model_tag
+
+    def get_bidirectional_lstm_glbm(self, embedding_matrix, model_idx):
+        embedding_layer = Embedding(self.word_index_num, self.embedding_dim,
+                                    weights=[embedding_matrix],
+                                    input_length=self.max_seq_len, trainable=False)
+        lstm_layer = Bidirectional(LSTM(self.output_feature_num,
+                          dropout=self.dropout_rate_lstm,
+                          recurrent_dropout=self.dropout_rate_lstm,
+                          return_sequences=True))
+        comment_input = Input(shape=(self.max_seq_len,))
+        embedded_sequences = embedding_layer(comment_input)
+        # x = SpatialDropout1D(self.dropout_rate_dense)(embedded_sequences)
+        x = lstm_layer(embedded_sequences)
+        x = Dropout(self.dropout_rate_dense)(x)
+        global_max = GlobalMaxPool1D()(x)
+        merged = Dense(self.dense_hidden_num, activation='relu')(global_max)
+        merged = Dropout(self.dropout_rate_dense)(merged)
+        merged = BatchNormalization()(merged)
+        y = Dense(self.output_size, activation='sigmoid')(merged)
+
+        model = Model(inputs=[comment_input], outputs=y)
+        model.compile(loss='binary_crossentropy',
+                      optimizer=Adam(),
+                      metrics=['accuracy'])
+
+        print(model.summary())
+
+        model_tag = 'bidirectional_lstm_attention_glove_vectors_drop_params_%.2f_%.2f' % (
+        self.dropout_rate_lstm, self.dropout_rate_dense)
+        self.bst_model_path = self.model_path + model_tag + '_model_idx_' + model_idx + '.h5'
+        print(model_tag)
+        self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5)
+        self.early_stopping = EarlyStopping(monitor='val_loss', patience=10)
+        self.model_checkpoint = ModelCheckpoint(self.bst_model_path, save_best_only=True, save_weights_only=True)
         self.model = model
         self.model_tag = model_tag
 
@@ -385,6 +421,7 @@ class nlp_model():
                           return_sequences=True))
         comment_input = Input(shape=(self.max_seq_len,))
         embedded_sequences = embedding_layer(comment_input)
+        # x = SpatialDropout1D(self.dropout_rate_dense)(embedded_sequences)
         x = lstm_layer(embedded_sequences)
         x = Dropout(self.dropout_rate_dense)(x)
         merged = Attention(self.max_seq_len)(x)
@@ -395,18 +432,18 @@ class nlp_model():
 
         model = Model(inputs=[comment_input], outputs=y)
         model.compile(loss='binary_crossentropy',
-                      optimizer='Adam',
+                      optimizer=Adam(),
                       metrics=['accuracy'])
 
         print(model.summary())
 
         model_tag = 'bidirectional_lstm_attention_glove_vectors_drop_params_%.2f_%.2f' % (
         self.dropout_rate_lstm, self.dropout_rate_dense)
-        bst_model_path = self.model_path + model_tag + '_model_idx_' + model_idx + '.h5'
+        self.bst_model_path = self.model_path + model_tag + '_model_idx_' + model_idx + '.h5'
         print(model_tag)
-        self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
+        self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=5)
         self.early_stopping = EarlyStopping(monitor='val_loss', patience=10)
-        self.model_checkpoint = ModelCheckpoint(bst_model_path, save_best_only=True, save_weights_only=True)
+        self.model_checkpoint = ModelCheckpoint(self.bst_model_path, save_best_only=True, save_weights_only=True)
         self.model = model
         self.model_tag = model_tag
 
@@ -436,11 +473,11 @@ class nlp_model():
         print(model.summary())
 
         model_tag = 'lstm_attention_glove_vectors_drop_params_%.2f_%.2f' % (self.dropout_rate_lstm, self.dropout_rate_dense)
-        bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
+        self.bst_model_path = self.model_path + model_tag + '_model_idx_' + str(model_idx) + '.h5'
         print(model_tag)
         self.reduce_lr_on_plateau = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5)
         self.early_stopping = EarlyStopping(monitor='val_loss', patience=10)
-        self.model_checkpoint = ModelCheckpoint(bst_model_path, save_best_only=True, save_weights_only=True)
+        self.model_checkpoint = ModelCheckpoint(self.bst_model_path, save_best_only=True, save_weights_only=True)
         self.model = model
         self.model_tag = model_tag
 
@@ -459,6 +496,12 @@ class nlp_model():
         print('testing data size: ' + str(data.shape))
         y = self.model.predict([data], batch_size=self.batch_size_test, verbose=2)
         return y
+
+    def load_model(self, model = None):
+        if model == None:
+            self.model.load_weights(self.bst_model_path)
+        else:
+            self.model.load_weights(model)
 
     def predict_from_saved_model(self, data, saved_model_path):
         y = 0

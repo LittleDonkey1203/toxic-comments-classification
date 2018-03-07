@@ -1,5 +1,5 @@
 from word_parse import WordParse
-from model import nlp_model
+from model_cudnn import nlp_model
 from sklearn.model_selection import KFold, StratifiedKFold
 import pandas as pd
 import random
@@ -112,35 +112,35 @@ if __name__ == '__main__':
             train_data_mn = data_tr[ind,:]
             train_y_mj = y_tr[~ind, :]
             train_y_mn = y_tr[ind,:]
-            data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 2, axis=0)), axis = 0)
-            y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 2, axis=0)), axis=0)
+            data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 7, axis=0)), axis = 0)
+            y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 7, axis=0)), axis=0)
 
-            # # Tag1 balance / severe_toxic blanced, >= 10%
-            # ind = y_tr[:,1] == 1
-            # train_data_mj = data_tr[~ind, :]
-            # train_data_mn = data_tr[ind, :]
-            # train_y_mj = y_tr[~ind, :]
-            # train_y_mn = y_tr[ind, :]
-            # data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 3, axis=0)), axis=0)
-            # y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 3, axis=0)), axis=0)
-            #
-            # # Tag3 balance / threat blanced, >= 10%
-            # ind = y_tr[:, 3] == 1
-            # train_data_mj = data_tr[~ind, :]
-            # train_data_mn = data_tr[ind, :]
-            # train_y_mj = y_tr[~ind, :]
-            # train_y_mn = y_tr[ind, :]
-            # data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 10, axis=0)), axis=0)
-            # y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 10, axis=0)), axis=0)
-            #
-            # # Tag5 balance / identity_hate blanced, >= 10%
-            # ind = y_tr[:, 5] == 1
-            # train_data_mj = data_tr[~ind, :]
-            # train_data_mn = data_tr[ind, :]
-            # train_y_mj = y_tr[~ind, :]
-            # train_y_mn = y_tr[ind, :]
-            # data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 3, axis=0)), axis=0)
-            # y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 3, axis=0)), axis=0)
+            # Tag1 balance / severe_toxic blanced, >= 10%
+            ind = y_tr[:,1] == 1
+            train_data_mj = data_tr[~ind, :]
+            train_data_mn = data_tr[ind, :]
+            train_y_mj = y_tr[~ind, :]
+            train_y_mn = y_tr[ind, :]
+            data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 3, axis=0)), axis=0)
+            y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 3, axis=0)), axis=0)
+
+            # Tag3 balance / threat blanced, >= 10%
+            ind = y_tr[:, 3] == 1
+            train_data_mj = data_tr[~ind, :]
+            train_data_mn = data_tr[ind, :]
+            train_y_mj = y_tr[~ind, :]
+            train_y_mn = y_tr[ind, :]
+            data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 10, axis=0)), axis=0)
+            y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 10, axis=0)), axis=0)
+
+            # Tag5 balance / identity_hate blanced, >= 10%
+            ind = y_tr[:, 5] == 1
+            train_data_mj = data_tr[~ind, :]
+            train_data_mn = data_tr[ind, :]
+            train_y_mj = y_tr[~ind, :]
+            train_y_mn = y_tr[ind, :]
+            data_tr = np.concatenate((train_data_mj, np.repeat(train_data_mn, 3, axis=0)), axis=0)
+            y_tr = np.concatenate((train_y_mj, np.repeat(train_y_mn, 3, axis=0)), axis=0)
 
         print('TAG0 RATIO in training data after balance;' + str(np.sum(y_tr[:, 0]) / len(y_tr)))
         print('TAG1 RATI0 in training data after balance;' + str(np.sum(y_tr[:, 1]) / len(y_tr)))
